@@ -43,6 +43,6 @@ if __name__ == "__main__":
             decrypt_start_time = timeit.default_timer()
             decrypted_data = shadow_obj.decrypt(key, encrypted_file)
             decrypt_end_time = timeit.default_timer() - decrypt_start_time
-            print("Decryption completed in %fms" % decrypt_end_time)
+            print("Decryption of file %s completed in %fms" % (file, decrypt_end_time))
             with open(file[:-4], "wb") as decrypted_file:
                 decrypted_file.write(decrypted_data)
