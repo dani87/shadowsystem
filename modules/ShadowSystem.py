@@ -22,7 +22,7 @@ class ShadowSystem:
 
     def encrypt(self, data):
         current_data = bytearray(data)
-        for i in range(1, 50):
+        for i in range(0, 100):
             current_state = [i for i in self.random_bytes]
             sbox = self.create(current_state)
             for index, byte in enumerate(current_data):
