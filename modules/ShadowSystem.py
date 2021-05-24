@@ -23,8 +23,6 @@ class ShadowSystem:
 
     def encrypt(self, data):
         current_data = bytearray(data)
-        seed = os.urandom(64)
-        random.seed(seed)
         magic_numbers = []
         for i in range(0, 50):
             current_state = [i for i in self.random_bytes]
@@ -35,6 +33,8 @@ class ShadowSystem:
             self.random_bytes = os.urandom(256)
 
         for i in range(0, 25):
+            seed = os.urandom(64)
+            random.seed(seed)
             self.random_bytes = [[i for i in os.urandom(256)] for i in range(2)]
             self.states.append(self.random_bytes)
             sbox_left = self.create(self.random_bytes[0])
