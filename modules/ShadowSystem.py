@@ -23,7 +23,6 @@ class ShadowSystem:
 
     def encrypt(self, data):
         current_data = bytearray(data)
-        magic_numbers = []
         for i in range(0, 50):
             current_state = [i for i in self.random_bytes]
             sbox = self.create(current_state)
@@ -41,32 +40,32 @@ class ShadowSystem:
             sbox_right = self.create(self.random_bytes[1])
             for index, byte in enumerate(current_data):
                 magic_number = random.randint(0, 100)
-                magic_numbers.append(magic_number)
                 if magic_number % 2 == 0:
                     current_data[index] = sbox_left[byte]
                 else:
                     current_data[index] = sbox_right[byte]
-            self.states.append(magic_numbers)
-            magic_numbers = []
+            self.states.append(seed)
 
         return self.states, current_data
 
     def decrypt(self, states, encrypted_data):
         current_data = bytearray(encrypted_data)
-        current_magic_numbers = []
+        seed = bytes()
         for state in reversed(states[-50:]):
-            if any(isinstance(i, list) for i in state):
+            if isinstance(state, list):
+                random.seed(seed)
                 sbox_left = self.create(state[0])
                 sbox_right = self.create(state[1])
                 sboxinv_left = self.invert(sbox_left)
                 sboxinv_right = self.invert(sbox_right)
                 for index, byte in enumerate(current_data):
-                    if current_magic_numbers[index] % 2 == 0:
+                    magic_number = random.randint(0, 100)
+                    if magic_number % 2 == 0:
                         current_data[index] = sboxinv_left[byte]
                     else:
                         current_data[index] = sboxinv_right[byte]
             else:
-                current_magic_numbers = state
+                seed = state
 
         for state in reversed(states[:-50]):
             sbox = self.create(state)
