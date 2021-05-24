@@ -3,7 +3,9 @@ import random
 
 
 class ShadowSystem:
-    def __init__(self):
+    def __init__(self, sbox_rounds=50, sbox_shuffle_rounds=25):
+        self.sbox_rounds = sbox_rounds
+        self.sbox_shuffle_rounds = sbox_shuffle_rounds
         self.random_bytes = os.urandom(256)
         self.states = []
 
@@ -23,7 +25,7 @@ class ShadowSystem:
 
     def encrypt(self, data):
         current_data = bytearray(data)
-        for i in range(0, 50):
+        for i in range(0, self.sbox_rounds):
             current_state = [i for i in self.random_bytes]
             sbox = self.create(current_state)
             for index, byte in enumerate(current_data):
@@ -31,7 +33,7 @@ class ShadowSystem:
             self.states.append(self.random_bytes)
             self.random_bytes = os.urandom(256)
 
-        for i in range(0, 25):
+        for i in range(0, self.sbox_shuffle_rounds):
             seed = os.urandom(64)
             random.seed(seed)
             self.random_bytes = [[i for i in os.urandom(256)] for i in range(2)]
@@ -51,7 +53,7 @@ class ShadowSystem:
     def decrypt(self, states, encrypted_data):
         current_data = bytearray(encrypted_data)
         seed = bytes()
-        for state in reversed(states[-50:]):
+        for state in reversed(states[-self.sbox_rounds:]):
             if isinstance(state, list):
                 random.seed(seed)
                 sbox_left = self.create(state[0])
@@ -67,7 +69,7 @@ class ShadowSystem:
             else:
                 seed = state
 
-        for state in reversed(states[:-50]):
+        for state in reversed(states[:-(self.sbox_shuffle_rounds * 2)]):
             sbox = self.create(state)
             sboxinv = self.invert(sbox)
             for index, byte in enumerate(current_data):
