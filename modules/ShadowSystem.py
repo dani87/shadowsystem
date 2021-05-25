@@ -53,7 +53,7 @@ class ShadowSystem:
     def decrypt(self, states, encrypted_data):
         current_data = bytearray(encrypted_data)
         seed = bytes()
-        for state in reversed(states[-self.sbox_rounds:]):
+        for state in reversed(states[-(self.sbox_shuffle_rounds * 2):]):
             if isinstance(state, list):
                 random.seed(seed)
                 sbox_left = self.create(state[0])
@@ -69,7 +69,7 @@ class ShadowSystem:
             else:
                 seed = state
 
-        for state in reversed(states[:-(self.sbox_shuffle_rounds * 2)]):
+        for state in reversed(states[:-self.sbox_rounds]):
             sbox = self.create(state)
             sboxinv = self.invert(sbox)
             for index, byte in enumerate(current_data):
