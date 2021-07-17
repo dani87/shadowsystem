@@ -3,13 +3,14 @@ import random
 
 
 class ShadowSystem:
-    def __init__(self, sbox_rounds=16, sbox_shuffle_rounds=8, block_size=1024):
+    def __init__(self, sbox_rounds=10, sbox_shuffle_rounds=6, block_size=1024):
         self.PAD_BYTE = 0x00
         self.MAGIC_BYTE = 0xB2
         self.sbox_rounds = sbox_rounds
         self.sbox_shuffle_rounds = sbox_shuffle_rounds
         self.block_size = block_size
         self.random_bytes = os.urandom(256)
+        self.random_bytes_shuffle = os.urandom(256)
         self.states = []
 
     @staticmethod
@@ -58,10 +59,10 @@ class ShadowSystem:
         for i in range(0, self.sbox_shuffle_rounds):
             seed = os.urandom(64)
             random.seed(seed)
-            self.random_bytes = [[i for i in os.urandom(256)] for i in range(2)]
-            self.states.append(self.random_bytes)
-            sbox_left = self.create(self.random_bytes[0])
-            sbox_right = self.create(self.random_bytes[1])
+            self.random_bytes_shuffle = [[i for i in os.urandom(256)] for i in range(2)]
+            self.states.append(self.random_bytes_shuffle)
+            sbox_left = self.create(self.random_bytes_shuffle[0])
+            sbox_right = self.create(self.random_bytes_shuffle[1])
             for index, byte in enumerate(current_data):
                 magic_number = random.randint(0, 100)
                 if magic_number % 2 == 0:
@@ -78,19 +79,6 @@ class ShadowSystem:
             raise Exception("Invalid block size for decrypt method, should be %d bytes, got %d bytes." % (self.block_size, len(current_data)))
         elif len(current_data) > self.block_size:
             raise Exception("Invalid block size for decrypt method, should be %d bytes, got %d bytes." % (self.block_size, len(current_data)))
-        else:
-            if current_data[-1] == self.MAGIC_BYTE:
-                pad_length = 0
-                current_data.pop()
-                data_iter = iter(reversed(current_data))
-                while data_iter:
-                    current_data_byte = next(data_iter)
-                    if current_data_byte == self.MAGIC_BYTE:
-                        pad_length += 1
-                    else:
-                        for i in range(0, current_data_byte):
-                            pad_length += current_data_byte
-                current_data = current_data[len(current_data) - pad_length:]
         seed = bytes()
         for state in reversed(states[-(self.sbox_shuffle_rounds * 2):]):
             if isinstance(state, list):
@@ -113,5 +101,17 @@ class ShadowSystem:
             sboxinv = self.invert(sbox)
             for index, byte in enumerate(current_data):
                 current_data[index] = sboxinv[byte]
+
+        if current_data[-1] == self.MAGIC_BYTE:
+            pad_length = 0
+            data_iter = iter(reversed(current_data))
+            while current_data_byte := next(data_iter):
+                if current_data_byte == self.MAGIC_BYTE:
+                    pad_length += 1
+                else:
+                    for i in range(0, current_data_byte):
+                        pad_length += next(data_iter)
+                    break
+            current_data = current_data[:(len(current_data) - pad_length + 1)]
 
         return current_data
