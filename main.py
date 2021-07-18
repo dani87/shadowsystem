@@ -16,6 +16,7 @@ if __name__ == "__main__":
                         help="decrypt provided file/files")
     args = parser.parse_args()
 
+    BLOCK_SIZE = 4096
     shadow_obj = ShadowSystem()
     if args.encrypt and args.decrypt:
         raise Exception("Encrypt and decrypt flags can't be set at the same time.")
@@ -24,17 +25,19 @@ if __name__ == "__main__":
     elif args.encrypt:
         for file in args.files:
             states = []
+            futures = []
             current_file = open(file, "rb")
             encrypted_file = open(file + ".shs", "w+b")
             encrypt_start_time = timeit.default_timer()
-            current_file_block = current_file.read(1024)
-            while current_file_block:
-                with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-                    future = executor.submit(shadow_obj.encrypt, current_file_block)
-                    key, encrypted_data = future.result()
-                    encrypted_file.write(encrypted_data)
-                    states.append(key)
-                current_file_block = current_file.read(1024)
+            current_file_block = current_file.read(BLOCK_SIZE)
+            with concurrent.futures.ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
+                while current_file_block:
+                    futures.append(executor.submit(shadow_obj.encrypt, current_file_block))
+                    current_file_block = current_file.read(BLOCK_SIZE)
+            for future in futures:
+                key, encrypted_data = future.result()
+                encrypted_file.write(encrypted_data)
+                states.append(key)
             encrypt_end_time = timeit.default_timer() - encrypt_start_time
             print("Encryption of file %s completed in %fms" % (file, encrypt_end_time))
             current_file.close()
@@ -45,6 +48,7 @@ if __name__ == "__main__":
                 f.write(pickle.dumps(states))
     elif args.decrypt:
         for file in args.files:
+            futures = []
             encrypted_file = open(file, "rb")
             decrypted_file = open(file[:-4], "wb")
             state_collection_name = hashlib.sha256(encrypted_file.read()).hexdigest()
@@ -52,13 +56,14 @@ if __name__ == "__main__":
                 states = pickle.load(key_file)
             decrypt_start_time = timeit.default_timer()
             encrypted_file.seek(0)
-            encrypted_file_block = encrypted_file.read(1024)
-            while encrypted_file_block:
-                for state in states:
-                    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-                        future = executor.submit(shadow_obj.decrypt, state, encrypted_file_block)
-                        decrypted_file.write(future.result())
-                encrypted_file_block = encrypted_file.read(1024)
+            encrypted_file_block = encrypted_file.read(BLOCK_SIZE)
+            with concurrent.futures.ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
+                while encrypted_file_block:
+                    for state in states:
+                        futures.append(executor.submit(shadow_obj.decrypt, state, encrypted_file_block))
+                    encrypted_file_block = encrypted_file.read(BLOCK_SIZE)
+            for future in futures:
+                decrypted_file.write(future.result())
             encrypted_file.close()
             decrypted_file.close()
             decrypt_end_time = timeit.default_timer() - decrypt_start_time

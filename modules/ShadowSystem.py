@@ -3,7 +3,7 @@ import random
 
 
 class ShadowSystem:
-    def __init__(self, sbox_rounds=10, sbox_shuffle_rounds=6, block_size=1024):
+    def __init__(self, sbox_rounds=3, sbox_shuffle_rounds=3, block_size=4096):
         self.PAD_BYTE = 0x00
         self.MAGIC_BYTE = 0xB2
         self.sbox_rounds = sbox_rounds
@@ -96,7 +96,7 @@ class ShadowSystem:
             else:
                 seed = state
 
-        for state in reversed(states[:-self.sbox_rounds]):
+        for state in reversed(states[:self.sbox_rounds]):
             sbox = self.create(state)
             sboxinv = self.invert(sbox)
             for index, byte in enumerate(current_data):
