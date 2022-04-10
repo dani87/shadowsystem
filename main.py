@@ -15,34 +15,39 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     shadow_obj = ShadowSystem()
+    key = shadow_obj.set_cipher_states()
     if args.encrypt and args.decrypt:
         raise Exception("Encrypt and decrypt flags can't be set at the same time.")
     elif not args.encrypt and not args.decrypt:
         raise Exception("Encrypt and decrypt flags can't be both unset.")
     elif args.encrypt:
         for file in args.files:
-            current_file = open(file, "rb")
             encrypt_start_time = timeit.default_timer()
-            key, encrypted_data = shadow_obj.encrypt(current_file.read())
+            with open(file, "rb") as in_file, open(file + ".shs", "wb") as out_file:
+                buffer = in_file.read(2048)
+                while buffer:
+                    encrypted_data_block = shadow_obj.encrypt_block(buffer)
+                    out_file.write(encrypted_data_block)
+                    buffer = in_file.read(2048)
             encrypt_end_time = timeit.default_timer() - encrypt_start_time
-            print("Encryption of file %s completed in %fms" % (file, encrypt_end_time))
-            current_file.close()
+            print("Encryption of file %s completed in %fs" % (file, encrypt_end_time))
 
-            with open(file + ".shs", "wb") as f:
-                f.write(encrypted_data)
-
-            state_collection_name = hashlib.sha256(encrypted_data).hexdigest()
+            state_collection_name = hashlib.sha256(open(file + ".shs", "rb").read()).hexdigest()
             with open(state_collection_name, "wb") as f:
                 f.write(pickle.dumps(key))
     elif args.decrypt:
         for file in args.files:
-            encrypted_file = open(file, "rb").read()
-            state_collection_name = hashlib.sha256(encrypted_file).hexdigest()
+            state_collection_name = hashlib.sha256(open(file, "rb").read()).hexdigest()
             with open(state_collection_name, "rb") as key_file:
                 key = pickle.load(key_file)
+
             decrypt_start_time = timeit.default_timer()
-            decrypted_data = shadow_obj.decrypt(key, encrypted_file)
+            with open(file, "rb") as in_file, open(file[:-4], "wb") as out_file:
+                buffer = in_file.read(2048)
+                while buffer:
+                    decrypted_data_block = shadow_obj.decrypt_block(key, buffer)
+                    out_file.write(decrypted_data_block)
+                    buffer = in_file.read(2048)
             decrypt_end_time = timeit.default_timer() - decrypt_start_time
-            print("Decryption of file %s completed in %fms" % (file, decrypt_end_time))
-            with open(file[:-4], "wb") as decrypted_file:
-                decrypted_file.write(decrypted_data)
+            print("Decryption of file %s completed in %fs" % (file, decrypt_end_time))
+
