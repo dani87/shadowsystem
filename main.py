@@ -5,6 +5,8 @@ import hashlib
 import argparse
 import pickle
 
+BLOCK_SIZE = 16
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Tool to encrypt/decrypt files using ShadowSystem symmetric cipher")
     parser.add_argument("files", metavar="files", type=str, nargs="+")
@@ -14,7 +16,7 @@ if __name__ == "__main__":
                         help="decrypt provided file/files")
     args = parser.parse_args()
 
-    shadow_obj = ShadowSystem()
+    shadow_obj = ShadowSystem(block_size=BLOCK_SIZE)
     key = shadow_obj.set_cipher_states()
     if args.encrypt and args.decrypt:
         raise Exception("Encrypt and decrypt flags can't be set at the same time.")
@@ -24,11 +26,9 @@ if __name__ == "__main__":
         for file in args.files:
             encrypt_start_time = timeit.default_timer()
             with open(file, "rb") as in_file, open(file + ".shs", "wb") as out_file:
-                buffer = in_file.read(2048)
-                while buffer:
-                    encrypted_data_block = shadow_obj.encrypt_block(buffer)
+                while block := in_file.read(BLOCK_SIZE):
+                    encrypted_data_block = shadow_obj.encrypt_block(block)
                     out_file.write(encrypted_data_block)
-                    buffer = in_file.read(2048)
             encrypt_end_time = timeit.default_timer() - encrypt_start_time
             print("Encryption of file %s completed in %fs" % (file, encrypt_end_time))
 
@@ -43,11 +43,11 @@ if __name__ == "__main__":
 
             decrypt_start_time = timeit.default_timer()
             with open(file, "rb") as in_file, open(file[:-4], "wb") as out_file:
-                buffer = in_file.read(2048)
+                buffer = in_file.read(BLOCK_SIZE)
                 while buffer:
-                    decrypted_data_block = shadow_obj.decrypt_block(key, buffer)
+                    decrypted_data_block = shadow_obj.decrypt_block(buffer, key)
                     out_file.write(decrypted_data_block)
-                    buffer = in_file.read(2048)
+                    buffer = in_file.read(BLOCK_SIZE)
             decrypt_end_time = timeit.default_timer() - decrypt_start_time
             print("Decryption of file %s completed in %fs" % (file, decrypt_end_time))
 
