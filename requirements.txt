@@ -1,0 +1,5 @@
+-i https://pypi.org/simple
+iniconfig==2.0.0; python_version >= '3.7'
+packaging==24.2; python_version >= '3.8'
+pluggy==1.5.0; python_version >= '3.8'
+pytest==8.3.4; python_version >= '3.8'
