@@ -28,4 +28,4 @@ jobs:
     # Run pytest
     - name: Run pytest
       run: |
-        pytest --disable-warnings
+        python -m pytest -s --disable-warnings
